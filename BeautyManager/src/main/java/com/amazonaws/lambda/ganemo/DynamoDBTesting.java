@@ -9,10 +9,10 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
+import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
 import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
 import com.amazonaws.services.dynamodbv2.model.KeyType;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
-import com.amazonaws.services.dynamodbv2.model.ScalarAttributeType;
 
 public class DynamoDBTesting {
 
@@ -22,19 +22,18 @@ public class DynamoDBTesting {
 		
 		 DynamoDB dynamoDB = new DynamoDB(client);
 		 
-		 String tableName = "Movies";
+		 String tableName = "BeautyRegiment";
 		 
 		 try {
-			 System.out.println("Attempting to create table; please wait...");
-	            Table table = dynamoDB.createTable(tableName,
-	                Arrays.asList(new KeySchemaElement("year", KeyType.HASH), // Partition
-	                                                                          // key
-	                    new KeySchemaElement("title", KeyType.RANGE)), // Sort key
-	                Arrays.asList(new AttributeDefinition("year", ScalarAttributeType.N),
-	                    new AttributeDefinition("title", ScalarAttributeType.S)),
-	                new ProvisionedThroughput(10L, 10L));
-	            table.waitForActive();
-	            System.out.println("Success.  Table status: " + table.getDescription().getTableStatus());
+			 CreateTableRequest request = new CreateTableRequest()
+					 .withTableName(tableName)
+					 .withKeySchema(Arrays.asList(new KeySchemaElement().withAttributeName("Id").withKeyType(KeyType.HASH)))
+					 .withAttributeDefinitions(Arrays.asList(new AttributeDefinition().withAttributeName("Id").withAttributeType("N")))
+					 .withProvisionedThroughput(new ProvisionedThroughput().withReadCapacityUnits(5L).withWriteCapacityUnits(6L));
+			 
+			 Table table = dynamoDB.createTable(request);
+			 table.waitForActive();
+			 System.out.println(table.getTableName());
 		 } catch (Exception e) {
 			 System.err.println("Unable to create table: ");
 	         System.err.println(e.getMessage());

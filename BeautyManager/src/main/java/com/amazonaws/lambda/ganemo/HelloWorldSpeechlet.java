@@ -12,6 +12,8 @@ package com.amazonaws.lambda.ganemo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+
+
 import com.amazon.speech.slu.Intent;
 import com.amazon.speech.speechlet.IntentRequest;
 import com.amazon.speech.speechlet.LaunchRequest;
@@ -24,6 +26,7 @@ import com.amazon.speech.speechlet.SpeechletResponse;
 import com.amazon.speech.ui.PlainTextOutputSpeech;
 import com.amazon.speech.ui.Reprompt;
 import com.amazon.speech.ui.SimpleCard;
+
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.dynamodbv2.*;
 
