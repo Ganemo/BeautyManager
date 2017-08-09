@@ -1,3 +1,12 @@
+/**
+    Copyright 2014-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+    Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance with the License. A copy of the License is located at
+
+        http://aws.amazon.com/apache2.0/
+
+    or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ */
 package com.amazonaws.lambda.ganemo;
 
 import org.slf4j.Logger;
@@ -15,13 +24,15 @@ import com.amazon.speech.speechlet.SpeechletResponse;
 import com.amazon.speech.ui.PlainTextOutputSpeech;
 import com.amazon.speech.ui.Reprompt;
 import com.amazon.speech.ui.SimpleCard;
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.dynamodbv2.*;
 
-public class LambdaFunctionHandler implements Speechlet {
+/**
+ * This sample shows how to create a simple speechlet for handling speechlet requests.
+ */
+public class HelloWorldSpeechlet implements Speechlet {
+    private static final Logger log = LoggerFactory.getLogger(HelloWorldSpeechlet.class);
 
-	private static final Logger log = LoggerFactory.getLogger(LambdaFunctionHandler.class);
-
-	private String InputText = "";
-	
     @Override
     public void onSessionStarted(final SessionStartedRequest request, final Session session)
             throws SpeechletException {
@@ -29,7 +40,7 @@ public class LambdaFunctionHandler implements Speechlet {
                 session.getSessionId());
         // any initialization logic goes here
         
-        InputText = session.getUser().getUserId();
+       
     }
 
     @Override
@@ -48,16 +59,14 @@ public class LambdaFunctionHandler implements Speechlet {
 
         Intent intent = request.getIntent();
         String intentName = (intent != null) ? intent.getName() : null;
-        	
         
-        return getHelloResponse();
-        /*if ("HelloWorldIntent".equals(intentName)) {
-            
+        if ("BeautyRegimen".equals(intentName)) {
+            return getHelloResponse();
         } else if ("AMAZON.HelpIntent".equals(intentName)) {
             return getHelpResponse();
         } else {
             throw new SpeechletException("Invalid Intent");
-        }*/
+        }
     }
 
     @Override
@@ -89,7 +98,7 @@ public class LambdaFunctionHandler implements Speechlet {
         Reprompt reprompt = new Reprompt();
         reprompt.setOutputSpeech(speech);
 
-        return SpeechletResponse.newTellResponse(speech, card);
+        return SpeechletResponse.newAskResponse(speech, reprompt, card);
     }
 
     /**
@@ -98,11 +107,11 @@ public class LambdaFunctionHandler implements Speechlet {
      * @return SpeechletResponse spoken and visual response for the given intent
      */
     private SpeechletResponse getHelloResponse() {
-        String speechText = "Hello world";
+        String speechText = "Wash Your Nasty Face";
 
         // Create the Simple card content.
         SimpleCard card = new SimpleCard();
-        card.setTitle("HelloWorld");
+        card.setTitle("WashYourFace");
         card.setContent(speechText);
 
         // Create the plain text output.
