@@ -38,18 +38,18 @@ import com.amazonaws.services.dynamodbv2.document.spec.GetItemSpec;
  * This sample shows how to create a simple speechlet for handling speechlet
  * requests.
  */
-public class HelloWorldSpeechlet implements Speechlet {
-	private static final Logger log = LoggerFactory.getLogger(HelloWorldSpeechlet.class);
+public class BeautyManagerSpeechlet implements Speechlet {
+	private static final Logger log = LoggerFactory.getLogger(BeautyManagerSpeechlet.class);
 
 	private DynamoDB dynamoDB;
-	private String requestId;
+	private String clientId;
 	
 	@Override
 	public void onSessionStarted(final SessionStartedRequest request, final Session session) throws SpeechletException {
 		log.info("onSessionStarted requestId={}, sessionId={}", request.getRequestId(), session.getSessionId());
 		// any initialization logic goes here
 		dynamoDB = new DynamoDB(AmazonDynamoDBClientBuilder.standard().withRegion(Regions.US_EAST_1).build());
-		requestId = request.getRequestId();
+		clientId = session.getUser().getUserId();
 	}
 
 	@Override
@@ -65,12 +65,14 @@ public class HelloWorldSpeechlet implements Speechlet {
 		Intent intent = request.getIntent();
 		String intentName = (intent != null) ? intent.getName() : null;
 
-		if ("BeautyRegimen".equals(intentName)) {
+		if ("Startup".equals(intentName)) {
 			return getHelloResponse();
+		} else if ("No".equals(intentName)) {
+			return getNoResponse();
 		} else if ("AMAZON.HelpIntent".equals(intentName)) {
 			return getHelpResponse();
 		} else {
-			throw new SpeechletException("Invalid Intent");
+			throw new SpeechletException("Invalid Intent: " + intentName);
 		}
 	}
 
@@ -110,32 +112,45 @@ public class HelloWorldSpeechlet implements Speechlet {
 	 * @return SpeechletResponse spoken and visual response for the given intent
 	 */
 	private SpeechletResponse getHelloResponse() {
-		String tableName = "Movies";
-
-		Table table = dynamoDB.getTable("BeautyManagement");
-		
-		
-
-		/*Item getoutcome = table.getItem(new GetItemSpec().withPrimaryKey("year", 1999, "title", "TheMovieOfMovies"));
-
-		Map<String, Object> mp = getoutcome.asMap();
-
-		String speechText = (String) mp.get("title");*/
-
-		//String speechText = "Hello There";
-
 		// Create the Simple card content.
 		SimpleCard card = new SimpleCard();
-		card.setTitle("WashYourFace");
-		card.setContent(requestId);
+		card.setTitle("Hello!");
+		card.setContent("It's Nice To See You Again.");
 
 		// Create the plain text output.
 		PlainTextOutputSpeech speech = new PlainTextOutputSpeech();
-		speech.setText(requestId);
+		speech.setText("Hello");
 
-		return SpeechletResponse.newTellResponse(speech, card);
+		Reprompt reprompt = new Reprompt();
+		reprompt.setOutputSpeech(speech);
+
+		return SpeechletResponse.newAskResponse(speech, reprompt, card);
 	}
+	
+	/**
+	 * Creates a {@code SpeechletResponse} for the hello intent.
+	 *
+	 * @return SpeechletResponse spoken and visual response for the given intent
+	 */
+	private SpeechletResponse getNoResponse() {
+		// Create the Simple card content.
+		SimpleCard card = new SimpleCard();
+		card.setTitle("No Problem");
+		card.setContent("Alright.");
 
+		// Create the plain text output.
+		PlainTextOutputSpeech speech = new PlainTextOutputSpeech();
+		speech.setText("Alright Then.");
+		
+		PlainTextOutputSpeech speech2 = new PlainTextOutputSpeech();
+		speech.setText("You Still There?");
+
+		Reprompt reprompt = new Reprompt();
+		reprompt.setOutputSpeech(speech2);
+
+		return SpeechletResponse.newAskResponse(speech, reprompt, card);
+	}
+	
 	/**
 	 * Creates a {@code SpeechletResponse} for the help intent.
 	 *
