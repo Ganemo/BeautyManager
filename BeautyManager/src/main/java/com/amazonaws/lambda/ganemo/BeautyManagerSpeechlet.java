@@ -9,13 +9,16 @@
  */
 package com.amazonaws.lambda.ganemo;
 
-import java.util.Map;
+import java.awt.List;
+import java.util.ArrayList;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.amazon.speech.slu.Intent;
+import com.amazon.speech.speechlet.Directive;
 import com.amazon.speech.speechlet.IntentRequest;
+import com.amazon.speech.speechlet.IntentRequest.DialogState;
 import com.amazon.speech.speechlet.LaunchRequest;
 import com.amazon.speech.speechlet.Session;
 import com.amazon.speech.speechlet.SessionEndedRequest;
@@ -23,16 +26,12 @@ import com.amazon.speech.speechlet.SessionStartedRequest;
 import com.amazon.speech.speechlet.Speechlet;
 import com.amazon.speech.speechlet.SpeechletException;
 import com.amazon.speech.speechlet.SpeechletResponse;
+import com.amazon.speech.speechlet.dialog.directives.DelegateDirective;
 import com.amazon.speech.ui.PlainTextOutputSpeech;
-import com.amazon.speech.ui.Reprompt;
 import com.amazon.speech.ui.SimpleCard;
 import com.amazonaws.regions.Regions;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
-import com.amazonaws.services.dynamodbv2.document.Item;
-import com.amazonaws.services.dynamodbv2.document.Table;
-import com.amazonaws.services.dynamodbv2.document.spec.GetItemSpec;
 
 /**
  * This sample shows how to create a simple speechlet for handling speechlet
@@ -41,15 +40,15 @@ import com.amazonaws.services.dynamodbv2.document.spec.GetItemSpec;
 public class BeautyManagerSpeechlet implements Speechlet {
 	private static final Logger log = LoggerFactory.getLogger(BeautyManagerSpeechlet.class);
 
-	private DynamoDB dynamoDB;
 	private String clientId;
-	
+
 	@Override
 	public void onSessionStarted(final SessionStartedRequest request, final Session session) throws SpeechletException {
 		log.info("onSessionStarted requestId={}, sessionId={}", request.getRequestId(), session.getSessionId());
 		// any initialization logic goes here
-		dynamoDB = new DynamoDB(AmazonDynamoDBClientBuilder.standard().withRegion(Regions.US_EAST_1).build());
 		clientId = session.getUser().getUserId();
+		BeautyManagerResponseManager.dynamoDB = new DynamoDB(
+				AmazonDynamoDBClientBuilder.standard().withRegion(Regions.US_EAST_1).build());
 	}
 
 	@Override
@@ -65,15 +64,28 @@ public class BeautyManagerSpeechlet implements Speechlet {
 		Intent intent = request.getIntent();
 		String intentName = (intent != null) ? intent.getName() : null;
 
-		if ("Startup".equals(intentName)) {
-			return getHelloResponse();
-		} else if ("No".equals(intentName)) {
-			return getNoResponse();
-		} else if ("AMAZON.HelpIntent".equals(intentName)) {
-			return getHelpResponse();
-		} else {
-			throw new SpeechletException("Invalid Intent: " + intentName);
+		if (intentName.equals("StartUp")) {
+			if (request.getDialogState() == DialogState.STARTED) {
+				return BeautyManagerResponseManager.buildDialogueDelegateResponse(intent, "This Shouldn't Fire");
+			} else if (request.getDialogState() == DialogState.COMPLETED) {
+				return getVerifyUserResponse(intent);
+			} else {
+				DelegateDirective dd = new DelegateDirective();
+
+				ArrayList<Directive> directiveList = new ArrayList<Directive>();
+				directiveList.add(dd);
+
+				SpeechletResponse speechletResp = new SpeechletResponse();
+				speechletResp.setDirectives(directiveList);
+				speechletResp.setShouldEndSession(false);
+				return speechletResp;
+			}
 		}
+
+		// Get Dialog State
+		DialogState dialogueState = request.getDialogState();
+
+		return getVerifyUserResponse(intent);
 	}
 
 	@Override
@@ -88,90 +100,39 @@ public class BeautyManagerSpeechlet implements Speechlet {
 	 * @return SpeechletResponse spoken and visual response for the given intent
 	 */
 	private SpeechletResponse getWelcomeResponse() {
-		String speechText = "Welcome to the Alexa Skills Kit, you can say hello";
+		String speechText = "Welcome to Beauty Manager for Alexa. You can schedule your Beauty Regimens through me!";
 
 		// Create the Simple card content.
 		SimpleCard card = new SimpleCard();
-		card.setTitle("HelloWorld");
+		card.setTitle("Welcome to Beauty Manager!");
 		card.setContent(speechText);
 
 		// Create the plain text output.
 		PlainTextOutputSpeech speech = new PlainTextOutputSpeech();
 		speech.setText(speechText);
 
-		// Create reprompt
-		Reprompt reprompt = new Reprompt();
-		reprompt.setOutputSpeech(speech);
-
-		return SpeechletResponse.newAskResponse(speech, reprompt, card);
+		return SpeechletResponse.newTellResponse(speech, card);
 	}
 
 	/**
-	 * Creates a {@code SpeechletResponse} for the hello intent.
-	 *
+	 * Creates and returns a {@code SpeechletResponse} trying to verify the
+	 * user.
+	 * 
 	 * @return SpeechletResponse spoken and visual response for the given intent
 	 */
-	private SpeechletResponse getHelloResponse() {
-		// Create the Simple card content.
-		SimpleCard card = new SimpleCard();
-		card.setTitle("Hello!");
-		card.setContent("It's Nice To See You Again.");
+	private SpeechletResponse getVerifyUserResponse(Intent intent) {
 
-		// Create the plain text output.
-		PlainTextOutputSpeech speech = new PlainTextOutputSpeech();
-		speech.setText("Hello");
-
-		Reprompt reprompt = new Reprompt();
-		reprompt.setOutputSpeech(speech);
-
-		return SpeechletResponse.newAskResponse(speech, reprompt, card);
-	}
-	
-	/**
-	 * Creates a {@code SpeechletResponse} for the hello intent.
-	 *
-	 * @return SpeechletResponse spoken and visual response for the given intent
-	 */
-	private SpeechletResponse getNoResponse() {
-		// Create the Simple card content.
-		SimpleCard card = new SimpleCard();
-		card.setTitle("No Problem");
-		card.setContent("Alright.");
-
-		// Create the plain text output.
-		PlainTextOutputSpeech speech = new PlainTextOutputSpeech();
-		speech.setText("Alright Then.");
+		String name = intent.getSlot("Name").getValue();
 		
-		PlainTextOutputSpeech speech2 = new PlainTextOutputSpeech();
-		speech.setText("You Still There?");
+		String speechResponse = "Hello " + name + "!";
 
-		Reprompt reprompt = new Reprompt();
-		reprompt.setOutputSpeech(speech2);
+		if (BeautyManagerResponseManager.verifyUser(clientId)) {
+			speechResponse += " What would you like to do?";
+		} else {
+			speechResponse += "It doesn't look like we've met before. I'll remember you. What would you like to do?";
+		}
 
-		return SpeechletResponse.newAskResponse(speech, reprompt, card);
+		return BeautyManagerResponseManager.getSpeechletResponse(speechResponse, speechResponse, "Hello!");
 	}
-	
-	/**
-	 * Creates a {@code SpeechletResponse} for the help intent.
-	 *
-	 * @return SpeechletResponse spoken and visual response for the given intent
-	 */
-	private SpeechletResponse getHelpResponse() {
-		String speechText = "You can say hello to me!";
 
-		// Create the Simple card content.
-		SimpleCard card = new SimpleCard();
-		card.setTitle("HelloWorld");
-		card.setContent(speechText);
-
-		// Create the plain text output.
-		PlainTextOutputSpeech speech = new PlainTextOutputSpeech();
-		speech.setText(speechText);
-
-		// Create reprompt
-		Reprompt reprompt = new Reprompt();
-		reprompt.setOutputSpeech(speech);
-
-		return SpeechletResponse.newAskResponse(speech, reprompt, card);
-	}
 }

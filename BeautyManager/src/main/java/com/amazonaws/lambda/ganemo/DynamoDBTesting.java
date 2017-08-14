@@ -1,16 +1,17 @@
 package com.amazonaws.lambda.ganemo;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Iterator;
 
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.amazonaws.services.dynamodbv2.document.Item;
-import com.amazonaws.services.dynamodbv2.document.PutItemOutcome;
+import com.amazonaws.services.dynamodbv2.document.ItemCollection;
+import com.amazonaws.services.dynamodbv2.document.QueryOutcome;
 import com.amazonaws.services.dynamodbv2.document.Table;
-import com.amazonaws.services.dynamodbv2.document.spec.GetItemSpec;
+import com.amazonaws.services.dynamodbv2.document.spec.QuerySpec;
+import com.amazonaws.services.dynamodbv2.document.utils.ValueMap;
 
 public class DynamoDBTesting {
 
@@ -19,7 +20,7 @@ public class DynamoDBTesting {
 
 		DynamoDB dynamoDB = new DynamoDB(client);
 
-		String tableName = "Movies";
+		String tableName = "BeautyManagementData";
 
 		try {
 			/*
@@ -47,11 +48,22 @@ public class DynamoDBTesting {
 			 * 		new ProvisionedThroughput(10L, 10L));
 			 */
 
-			Table table = dynamoDB.getTable("Movies");
+			Table table = dynamoDB.getTable(tableName);
 
 			table.waitForActive();
-			System.out.println(table.getTableName() + "Created and ACTIVE");
-
+			//System.out.println(table.getTableName() + "Created and ACTIVE");
+			
+			QuerySpec spec = new QuerySpec()
+					.withKeyConditionExpression("Id = :v_id")
+					.withValueMap(new ValueMap().withString(":v_id", "123"));
+			
+			ItemCollection<QueryOutcome> itms = table.query(spec);
+			System.out.println(itms.getAccumulatedItemCount() + "-" + itms.getAccumulatedScannedCount());
+			
+			Iterator<Item> iterator = itms.iterator();
+			while (iterator.hasNext()) {
+			    System.out.println(iterator.next().toJSONPretty());
+			}
 			/*Map<String, Object> infoMap = new HashMap<String, Object>();
 			infoMap.put("plot", "Nothing happens at all.");
 			infoMap.put("rating", 0);
@@ -62,12 +74,12 @@ public class DynamoDBTesting {
 
 			System.out.println("PutItem succeeded:\n" + outcome.getPutItemResult());
 			*/
-			System.out.println("Attempting to read the item...");
+			/*System.out.println("Attempting to read the item...");
             Item getoutcome = table.getItem(new GetItemSpec().withPrimaryKey("year", 1999, "title", "TheMovieOfMovies"));
             
-            System.out.println("GetItem succeeded: " + (String)getoutcome.asMap().get("title"));
+            System.out.println("GetItem succeeded: " + (String)getoutcome.asMap().get("title"));*/
 		} catch (Exception e) {
-			System.err.println("Unable to create table: ");
+			//System.err.println("Unable to create table: ");
 			System.err.println(e.getMessage());
 		}
 	}
